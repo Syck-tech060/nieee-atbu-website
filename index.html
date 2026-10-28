@@ -1,29 +1,70 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#07142b">
-<title>NIEEE ATBU Student Chapter</title>
-<meta name="description" content="The NIEEE ATBU Student Chapter: engineering development, membership, events and announcements.">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07142b">
+  <title>NIEEE ATBU Student Chapter</title>
+  <meta name="description" content="The NIEEE ATBU Student Chapter: engineering development, membership, events and announcements.">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip" href="#view">Skip to content</a>
-<header class="top">
-  <a class="brand" href="#home"><img src="assets/nieee-logo.jpg" alt="NIEEE logo" width="44" height="44"><span>NIEEE ATBU<small>Student Chapter</small></span></a>
-  <button id="menuBtn" class="menu" aria-expanded="false" aria-controls="nav" type="button">Menu</button>
-  <nav id="nav" aria-label="Main navigation"></nav>
-</header>
-<main id="view" tabindex="-1"></main>
-<footer>
-  <img src="assets/atbu-crest.jpg" alt="ATBU crest" width="48" height="50">
-  <div><strong>NIEEE ATBU Student Chapter</strong><br>Abubakar Tafawa Balewa University, Bauchi<br><span id="contact"></span></div>
-  <p class="muted">Student chapter portal. Chapter information should be verified by the current executive council before publication.</p>
-</footer>
-<noscript><p style="padding:1rem">This portal needs JavaScript enabled.</p></noscript>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+  <a class="skip" href="#view">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="#home">
+      <img src="assets/nieee-logo.jpg" alt="NIEEE logo" width="44" height="44">
+      <span>NIEEE ATBU<small>Student Chapter</small></span>
+    </a>
+
+    <button id="menuBtn" class="menu" aria-expanded="false"
+      aria-controls="nav" type="button">Menu</button>
+
+    <nav id="nav" aria-label="Main navigation"></nav>
+  </header>
+
+  <main id="view" tabindex="-1"></main>
+
+  <footer>
+    <img src="assets/atbu-crest.jpg" alt="ATBU crest" width="48" height="50">
+
+    <div>
+      <strong id="footer-site-name">NIEEE ATBU Student Chapter</strong>
+      <p id="footer-tagline">Engineering development, innovation and professional growth.</p>
+      <p id="footer-address">Abubakar Tafawa Balewa University, Bauchi</p>
+
+      <p>
+        <a id="footer-email" href="mailto:">Email</a>
+        <span aria-hidden="true"> · </span>
+        <a id="footer-phone" href="tel:">Phone</a>
+      </p>
+
+      <p>
+        <a id="footer-fb" href="#" hidden>Facebook</a>
+        <a id="footer-tw" href="#" hidden>X</a>
+        <a id="footer-ig" href="#" hidden>Instagram</a>
+        <a id="footer-li" href="#" hidden>LinkedIn</a>
+        <a id="footer-wa" href="#" hidden>WhatsApp</a>
+      </p>
+    </div>
+
+    <p class="muted">
+      Student chapter portal. Chapter information should be verified by the
+      current executive council before publication.
+    </p>
+
+    <p class="muted">
+      &copy; <span id="footer-year"></span> NIEEE ATBU Student Chapter.
+    </p>
+  </footer>
+
+  <noscript>
+    <p style="padding:1rem">This portal needs JavaScript enabled.</p>
+  </noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
