@@ -320,6 +320,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </nav>
 
   <div class="nav-right">
+     <a class="btn btn-ghost btn-sm"
+   id="member-nav-btn"
+   onclick="go('member')"
+   style="display:none">
+   My Account
+</a>
+
+<a class="btn btn-ghost btn-sm"
+   id="member-login-btn"
+   onclick="go('member-login')">
+   Member Login
+</a>
     <a class="btn btn-gold btn-sm" onclick="go('membership')">Join NIEEE</a>
     <a class="btn btn-ghost btn-sm" id="admin-nav-btn" onclick="go('admin')" style="display:none">Admin ⚙</a>
     <button class="hbg" id="hbg-btn" onclick="toggleMob()" aria-label="Menu">
@@ -338,6 +350,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <span class="mob-a" onclick="go('resources');closeMob()">📁 Resources</span>
   <span class="mob-a" onclick="go('membership');closeMob()">✍️ Join Us</span>
   <span class="mob-a" id="mob-admin-btn" onclick="go('admin');closeMob()" style="display:none">⚙️ Admin</span>
+   <span class="mob-a"
+      id="mob-member-login-btn"
+      onclick="go('member-login');closeMob()">
+  🔐 Member Login
+</span>
+
+<span class="mob-a"
+      id="mob-member-nav-btn"
+      onclick="go('member');closeMob()"
+      style="display:none">
+  👤 My Account
+</span>
 </nav>
 
 <!-- MAIN -->
@@ -450,6 +474,453 @@ async function handleUser(u) {
   user = a ? { ...u, isAdmin:true } : u;
   setAdminNav(!!a);
 }
+   /* =========================================
+   PUBLIC MEMBER LOGIN AND REGISTRATION
+========================================= */
+
+function pMemberLogin(message = '', mode = 'login') {
+  const signup = mode === 'signup';
+
+  html(`
+    <div class="container"
+         style="max-width:520px;padding:3rem 1.25rem">
+
+      <div class="card">
+        <div class="cb">
+
+          <div style="text-align:center;margin-bottom:2rem">
+            <h2>${signup ? 'Create Member Account' : 'Member Login'}</h2>
+            <p style="margin-top:.5rem">
+              NIEEE ATBU Student Chapter
+            </p>
+          </div>
+
+          <div class="fe ${message ? 'show' : ''}"
+               id="ml-err"
+               style="display:${message ? 'block' : 'none'};
+                      margin-bottom:1rem">
+            ${escapeHTML(message)}
+          </div>
+
+          <form onsubmit="${signup
+            ? 'doMemberSignup(event)'
+            : 'doMemberLogin(event)'}">
+
+            ${signup ? `
+              <div class="fg">
+                <label class="fl">Full Name *</label>
+                <input class="fc"
+                       id="ml-name"
+                       type="text"
+                       required
+                       maxlength="120"
+                       autocomplete="name"
+                       placeholder="Enter your full name">
+              </div>
+
+              <div class="fg">
+                <label class="fl">Matric Number</label>
+                <input class="fc"
+                       id="ml-matric"
+                       type="text"
+                       maxlength="40"
+                       placeholder="e.g. 20/12345/EE">
+              </div>
+
+              <div class="fg">
+                <label class="fl">Department</label>
+                <input class="fc"
+                       id="ml-dept"
+                       type="text"
+                       maxlength="100"
+                       placeholder="Your department">
+              </div>
+
+              <div class="fg">
+                <label class="fl">Level</label>
+                <select class="fc" id="ml-level">
+                  <option value="">Select level</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                  <option value="300">300</option>
+                  <option value="400">400</option>
+                  <option value="500">500</option>
+                  <option value="Graduate">Graduate</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            ` : ''}
+
+            <div class="fg">
+              <label class="fl">Email Address *</label>
+              <input class="fc"
+                     id="ml-email"
+                     type="email"
+                     required
+                     autocomplete="email"
+                     placeholder="you@example.com">
+            </div>
+
+            <div class="fg">
+              <label class="fl">Password *</label>
+              <input class="fc"
+                     id="ml-pass"
+                     type="password"
+                     required
+                     minlength="8"
+                     autocomplete="${signup
+                       ? 'new-password'
+                       : 'current-password'}"
+                     placeholder="${signup
+                       ? 'At least 8 characters'
+                       : 'Your password'}">
+            </div>
+
+            <button class="btn btn-gold w100 btn-lg"
+                    type="submit"
+                    id="ml-btn">
+              ${signup ? 'Create Account →' : 'Log In →'}
+            </button>
+
+          </form>
+
+          <p style="text-align:center;font-size:.88rem;margin-top:1.2rem">
+            ${signup
+              ? `Already have an account?
+                 <a onclick="pMemberLogin('', 'login')"
+                    style="color:var(--gold);cursor:pointer">
+                   Log in
+                 </a>`
+              : `New to the member portal?
+                 <a onclick="pMemberLogin('', 'signup')"
+                    style="color:var(--gold);cursor:pointer">
+                   Create an account
+                 </a>`
+            }
+          </p>
+
+          <p style="text-align:center;font-size:.8rem;margin-top:1rem">
+            Administrator?
+            <a onclick="go('admin')"
+               style="color:var(--gold);cursor:pointer">
+              Admin Login
+            </a>
+          </p>
+
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+
+/* Display errors on the member form */
+function memberAuthError(message) {
+  const errorBox = document.getElementById('ml-err');
+
+  if (errorBox) {
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+    errorBox.classList.add('show');
+  }
+}
+
+
+/* Register a new public member account */
+async function doMemberSignup(event) {
+  event.preventDefault();
+
+  if (!db) {
+    memberAuthError('Supabase is not configured.');
+    return;
+  }
+
+  const name = document.getElementById('ml-name').value.trim();
+  const email = document.getElementById('ml-email').value.trim();
+  const password = document.getElementById('ml-pass').value;
+
+  const button = document.getElementById('ml-btn');
+
+  if (!name) {
+    memberAuthError('Please enter your full name.');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Creating account…';
+
+  try {
+    const { data, error } = await db.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          matric_number:
+            document.getElementById('ml-matric').value.trim(),
+          department:
+            document.getElementById('ml-dept').value.trim(),
+          level:
+            document.getElementById('ml-level').value
+        }
+      }
+    });
+
+    if (error) throw error;
+
+    if (data.session && data.user) {
+      const result = await handleUser(data.user);
+
+      if (!result.ok) {
+        throw new Error(
+          result.message || 'Could not verify your account.'
+        );
+      }
+
+      toast('Member account created successfully!', 'success');
+      go('member');
+
+    } else {
+      pMemberLogin(
+        'Your account has been created. Check your email for the Supabase confirmation link, then log in.',
+        'login'
+      );
+    }
+
+  } catch (error) {
+    console.error('Member registration error:', error);
+
+    const message = /already registered/i.test(error.message || '')
+      ? 'An account with this email already exists. Please log in.'
+      : (error.message || 'Registration failed. Please try again.');
+
+    memberAuthError(message);
+
+    button.disabled = false;
+    button.textContent = 'Create Account →';
+  }
+}
+
+
+/* Log in an existing member */
+async function doMemberLogin(event) {
+  event.preventDefault();
+
+  if (!db) {
+    memberAuthError('Supabase is not configured.');
+    return;
+  }
+
+  const email = document.getElementById('ml-email').value.trim();
+  const password = document.getElementById('ml-pass').value;
+  const button = document.getElementById('ml-btn');
+
+  button.disabled = true;
+  button.textContent = 'Logging in…';
+
+  try {
+    const { data, error } = await db.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+
+    const result = await handleUser(data.user);
+
+    if (!result.ok) {
+      throw new Error(
+        result.message || 'Could not verify your account.'
+      );
+    }
+
+    toast('You are logged in!', 'success');
+    go('member');
+
+  } catch (error) {
+    console.error('Member login error:', error);
+
+    const message = /invalid login credentials/i.test(
+      error.message || ''
+    )
+      ? 'Email or password is incorrect.'
+      : (error.message || 'Login failed. Please try again.');
+
+    memberAuthError(message);
+
+    button.disabled = false;
+    button.textContent = 'Log In →';
+  }
+}
+
+
+/* Member account page */
+async function pMemberPortal() {
+  if (!user) {
+    pMemberLogin();
+    return;
+  }
+
+  const signedInUser = user;
+
+  html(`
+    <div class="container"
+         style="max-width:900px;padding:3rem 1.25rem">
+
+      <div class="fxb"
+           style="gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
+
+        <div>
+          <p style="color:var(--gold);font-weight:700">
+            NIEEE ATBU
+          </p>
+
+          <h1>My Member Account</h1>
+
+          <p>
+            Welcome,
+            ${escapeHTML(
+              signedInUser.user_metadata?.full_name ||
+              signedInUser.email ||
+              'Member'
+            )}.
+          </p>
+        </div>
+
+        <button class="btn btn-ghost"
+                onclick="doMemberLogout()">
+          Log Out
+        </button>
+
+      </div>
+
+      <div class="card">
+        <div class="cb">
+          <h3>Account Details</h3>
+
+          <div id="member-profile-content"
+               style="margin-top:1rem">
+            ${loading('Loading your profile…')}
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="cb">
+          <h3>Membership Information</h3>
+
+          <p style="margin-top:.75rem">
+            Creating a website account does not automatically
+            approve an official NIEEE membership application.
+          </p>
+
+          <p style="margin-top:.75rem">
+            To apply for membership, visit
+            <a onclick="go('membership')"
+               style="color:var(--gold);cursor:pointer">
+              Join NIEEE
+            </a>.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  `);
+
+  try {
+    const { data, error } = await db
+      .from('member_profiles')
+      .select(
+        'full_name,matric_number,department,level,created_at'
+      )
+      .eq('id', signedInUser.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const profile = data || {};
+    const element = document.getElementById(
+      'member-profile-content'
+    );
+
+    if (!element) return;
+
+    element.innerHTML = `
+      <p><strong>Name:</strong>
+        ${escapeHTML(
+          profile.full_name ||
+          signedInUser.user_metadata?.full_name ||
+          'Not provided'
+        )}
+      </p>
+
+      <p style="margin-top:.65rem">
+        <strong>Email:</strong>
+        ${escapeHTML(signedInUser.email || '')}
+      </p>
+
+      <p style="margin-top:.65rem">
+        <strong>Matric Number:</strong>
+        ${escapeHTML(profile.matric_number || 'Not provided')}
+      </p>
+
+      <p style="margin-top:.65rem">
+        <strong>Department:</strong>
+        ${escapeHTML(profile.department || 'Not provided')}
+      </p>
+
+      <p style="margin-top:.65rem">
+        <strong>Level:</strong>
+        ${escapeHTML(profile.level || 'Not provided')}
+      </p>
+    `;
+
+  } catch (error) {
+    console.error('Member profile error:', error);
+
+    const element = document.getElementById(
+      'member-profile-content'
+    );
+
+    if (element) {
+      element.textContent =
+        'Could not load your profile. Check the member_profiles table and its RLS policies.';
+    }
+  }
+}
+
+
+/* Log out a member */
+async function doMemberLogout() {
+  if (!db) return;
+
+  const { error } = await db.auth.signOut();
+
+  if (error) {
+    console.error('Logout error:', error);
+    toast('Could not log out. Please try again.', 'error');
+    return;
+  }
+
+  user = null;
+  setAdminNav(false);
+
+  toast('You have logged out.', 'info');
+  go('home');
+}
+
+
+/* Safely display user-provided text */
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+   
 function setAdminNav(on) {
   ['admin-nav-btn','mob-admin-btn'].forEach(id => {
     const e = document.getElementById(id); if(e) e.style.display = on ? 'inline-flex' : 'none';
@@ -457,31 +928,70 @@ function setAdminNav(on) {
 }
 
 /* ── Router ── */
-const PAGE_FNS = { home:pHome, about:pAbout, team:pTeam, events:pEvents,
-  announcements:pAnn, resources:pRes, membership:pMember, admin:pAdmin };
 
-function go(page) {
-  if (['admin'].includes(page) && (!user || !user.isAdmin)) { pAdminLogin(); navHL(page); return; }
-  location.hash = page;
-  window.scrollTo({ top:0, behavior:'smooth' });
+const PAGE_FNS = {
+  home: pHome,
+  about: pAbout,
+  team: pTeam,
+  events: pEvents,
+  announcements: pAnn,
+  resources: pRes,
+  membership: pMember,
+  'member-login': pMemberLogin,
+  member: pMemberPortal,
+  admin: pAdmin
+};
+
+const VALID_PAGES = new Set(Object.keys(PAGE_FNS));
+
+function renderPage(page, scroll = true) {
+  if (!VALID_PAGES.has(page)) {
+    page = 'home';
+  }
+
+  currentPage = page;
+
+  if (scroll) {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
   navHL(page);
   closeMob();
-  (PAGE_FNS[page] || pHome)();
+
+  // Admin access remains separate.
+  if (page === 'admin' && (!user || !user.isAdmin)) {
+    pAdminLogin();
+    return;
+  }
+
+  // Member account requires a signed-in user.
+  if (page === 'member' && !user) {
+    pMemberLogin();
+    return;
+  }
+
+  PAGE_FNS[page]();
 }
-function navHL(p) {
-  document.querySelectorAll('.nav-a,.mob-a').forEach(e => e.classList.toggle('on', e.dataset.p===p));
+
+function go(page) {
+  if (!VALID_PAGES.has(page)) {
+    page = 'home';
+  }
+
+  if (location.hash !== `#${page}`) {
+    location.hash = page;
+    return;
+  }
+
+  renderPage(page);
 }
-function html(h) { document.getElementById('main').innerHTML = h; }
-function loading(m='Loading…') { return `<div class="loading"><div class="spin"></div><span>${m}</span></div>`; }
-function empty(ico, m, sub='') {
-  return `<div class="empty"><div class="empty-ico">${ico}</div><h3 style="color:var(--muted)">${m}</h3>${sub?`<p style="margin-top:.5rem">${sub}</p>`:''}</div>`;
-}
-function fd(d) { return d ? new Date(d).toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) : ''; }
-function ft(d) { return d ? new Date(d).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'}) : ''; }
-function imgURL(bkt, path) {
-  if (!path) return '';
-  return `${SUPABASE_URL}/storage/v1/object/public/${bkt}/${path}`;
-}
+
+window.addEventListener('hashchange', () => {
+  renderPage(location.hash.slice(1) || 'home', false);
+});
 
 /* ── Mobile nav ── */
 let mobOpen = false;
