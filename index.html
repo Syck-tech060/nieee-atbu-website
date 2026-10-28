@@ -66,5 +66,24 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
+
+  <!-- Main Content Area where app.js renders views -->
+    <main id="main-content">
+      <!-- Static fallback / initial render -->
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-wrap" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- 1. Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- 2. Configuration & Helpers (Must load first) -->
+    <script src="config.js"></script>
+
+    <!-- 3. Main Application Logic -->
+    <script src="app.js"></script>
+
+  
 </body>
 </html>
