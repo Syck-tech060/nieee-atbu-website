@@ -1,3 +1,4 @@
+
 /* ================================================================
    NIEEE ATBU — app.js
    Handles: routing, all public pages, admin dashboard
@@ -16,6 +17,10 @@ let currentPage   = 'home';
    INIT
 ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
+   // In your DOMContentLoaded listener in app.js:
+const hash = window.location.hash.replace('#', '').trim();
+const initialPage = (publicPages.includes(hash)) ? hash : 'home';
+navigate(initialPage);
   const footerYear = document.getElementById('footer-year');
 if (footerYear) footerYear.textContent = new Date().getFullYear();
 
