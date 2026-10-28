@@ -16,7 +16,8 @@ let currentPage   = 'home';
    INIT
 ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('footer-year').textContent = new Date().getFullYear();
+  const footerYear = document.getElementById('footer-year');
+if (footerYear) footerYear.textContent = new Date().getFullYear();
 
   // Load site settings (name, tagline, contact etc.)
   await loadSiteSettings();
