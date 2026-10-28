@@ -469,10 +469,71 @@ function applyCfg() {
 }
 
 /* ── Auth ── */
-async function handleUser(u) {
-  const { data: a } = await db.from('admins').select('*').eq('email', u.email).single();
-  user = a ? { ...u, isAdmin:true } : u;
-  setAdminNav(!!a);
+async function handleUser(authUser) {
+  if (!db || !authUser?.email) {
+    user = null;
+    setAdminNav(false);
+
+    return {
+      ok: false,
+      isAdmin: false,
+      message: 'Could not verify the signed-in account.'
+    };
+  }
+
+  try {
+    const { data: adminRow, error } = await db
+      .from('admins')
+      .select('id,email,full_name,role')
+      .eq('email', authUser.email)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Admin lookup failed:', error);
+
+      user = {
+        ...authUser,
+        isAdmin: false
+      };
+
+      setAdminNav(false);
+
+      return {
+        ok: false,
+        isAdmin: false,
+        message: 'Could not verify administrator access.'
+      };
+    }
+
+    user = {
+      ...authUser,
+      isAdmin: !!adminRow,
+      adminRole: adminRow?.role
+    };
+
+    setAdminNav(!!adminRow);
+
+    return {
+      ok: true,
+      isAdmin: !!adminRow
+    };
+
+  } catch (error) {
+    console.error('Account verification failed:', error);
+
+    user = {
+      ...authUser,
+      isAdmin: false
+    };
+
+    setAdminNav(false);
+
+    return {
+      ok: false,
+      isAdmin: false,
+      message: 'Account verification failed.'
+    };
+  }
 }
    /* =========================================
    PUBLIC MEMBER LOGIN AND REGISTRATION
