@@ -287,6 +287,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
 ════════════════════════════════════════════ -->
 <script>
   // ▼▼▼ FILL IN YOUR SUPABASE KEYS HERE ▼▼▼
+  // Use your existing Supabase project's URL and publishable (or legacy anon) key.
+  // Never place a service-role/secret key in this client-side file.
   const SUPABASE_URL      = 'https://qkoicdyewvvjqmmnrrws.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_3EXhJn13EMo5nfssCl1KnA_3bfA1uy8';
   // ▲▲▲ FILL IN YOUR SUPABASE KEYS ABOVE ▲▲▲
@@ -320,19 +322,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </nav>
 
   <div class="nav-right">
-     <a class="btn btn-ghost btn-sm"
-   id="member-nav-btn"
-   onclick="go('member')"
-   style="display:none">
-   My Account
-</a>
-
-<a class="btn btn-ghost btn-sm"
-   id="member-login-btn"
-   onclick="go('member-login')">
-   Member Login
-</a>
     <a class="btn btn-gold btn-sm" onclick="go('membership')">Join NIEEE</a>
+    <a class="btn btn-ghost btn-sm" id="member-nav-btn" onclick="go('member')" style="display:none">My Account</a>
+    <a class="btn btn-ghost btn-sm" id="member-login-btn" onclick="go('member-login')">Member Login</a>
     <a class="btn btn-ghost btn-sm" id="admin-nav-btn" onclick="go('admin')" style="display:none">Admin ⚙</a>
     <button class="hbg" id="hbg-btn" onclick="toggleMob()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -349,19 +341,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <span class="mob-a" onclick="go('announcements');closeMob()">📢 Announcements</span>
   <span class="mob-a" onclick="go('resources');closeMob()">📁 Resources</span>
   <span class="mob-a" onclick="go('membership');closeMob()">✍️ Join Us</span>
-  <span class="mob-a" id="mob-admin-btn" onclick="go('admin');closeMob()" style="display:none">⚙️ Admin</span>
-   <span class="mob-a"
-      id="mob-member-login-btn"
-      onclick="go('member-login');closeMob()">
-  🔐 Member Login
-</span>
-
-<span class="mob-a"
-      id="mob-member-nav-btn"
-      onclick="go('member');closeMob()"
-      style="display:none">
-  👤 My Account
-</span>
+  <span class="mob-a" id="mob-member-login-btn" onclick="go('member-login');closeMob()">🔐 Member Login</span>
+  <span class="mob-a" id="mob-member-nav-btn" onclick="go('member');closeMob()" style="display:none">👤 My Account</span>
+  <span class="mob-a" id="mob-admin-btn" onclick="go('admin');closeMob()" style="display:none">⚙️ Admin Dashboard</span>
 </nav>
 
 <!-- MAIN -->
@@ -399,6 +381,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="fcol">
         <h4>Members</h4>
         <a onclick="go('membership')">Join NIEEE</a>
+        <a onclick="go('member-login')">Member Login / Sign Up</a>
         <a onclick="go('resources')">Resources</a>
         <a href="https://nieee.org" target="_blank">NIEEE National</a>
         <a href="https://ieee.org" target="_blank">IEEE Global</a>
@@ -412,7 +395,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="footer-bottom">
       <span>© <span id="yr"></span> NIEEE ATBU Student Chapter. All rights reserved.</span>
-      <span style="color:var(--gold);font-weight:600">Inspiring Engineers. Building Futures.</span>
+      <span style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap"><a href="#member-login" onclick="go('member-login')" style="color:var(--muted);font-size:.8rem">Member login</a><a href="#admin" onclick="go('admin')" style="color:var(--muted);font-size:.8rem">Administrator login</a><span style="color:var(--gold);font-weight:600">Inspiring Engineers. Building Futures.</span></span>
     </div>
   </div>
 </footer>
@@ -423,9 +406,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
      ALL JAVASCRIPT
 ════════════════════════════════════════════ -->
 <script>
+// Capture the initial callback before Supabase consumes auth tokens from the URL.
+const INITIAL_AUTH_HASH = window.location.hash;
+const INITIAL_AUTH_QUERY = new URLSearchParams(window.location.search);
+const NIEEE_SITE_URL = 'https://syck-tech060.github.io/nieee-atbu-website/';
 /* ── Init Supabase ── */
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseConfigured = !!(
+  window.supabase &&
+  SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_ID') &&
+  SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_') &&
+  !SUPABASE_ANON_KEY.includes('YOUR_ANON_')
+);
+const db = supabaseConfigured
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 /* ── State ── */
 let user = null, cfg = {}, adminSec = 'overview', currentPage = 'home';
@@ -436,31 +430,60 @@ function injectLogos() {
   ['nb-atbu', 'ft-atbu' ].forEach(id => { const e=document.getElementById(id); if(e) e.src=ATBU_LOGO; });
 }
 
+function showConfigError() {
+  const main = document.getElementById('main');
+  if (!main) return;
+  main.innerHTML = `<section class="container" style="padding:4rem 1.25rem;max-width:760px">
+    <div class="card"><div class="cb"><h2>Website setup required</h2>
+    <p>Supabase is not configured in this copy of the website, so login and live content cannot load yet.</p>
+    <p style="margin-top:.8rem">Open the CONFIG section near the top of this HTML file and enter your existing Supabase Project URL and publishable/anon public key. Do not use a service-role or secret key.</p></div></div></section>`;
+  console.error('[NIEEE] Supabase configuration is missing or still contains placeholder values.');
+}
+
 /* ── BOOT ── */
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('yr').textContent = new Date().getFullYear();
   injectLogos();
-
-  // Render the requested page FIRST so public pages never wait on Supabase.
-  go(location.hash.replace('#','') || 'home');
-
-  // Then load settings and session; failures here must not break navigation.
-  try { await loadCfg(); } catch (e) { console.warn('Site settings unavailable:', e); }
+  if (!db) { showConfigError(); return; }
+  await loadCfg();
   try {
-    const { data: { session } } = await db.auth.getSession();
-    if (session) await handleUser(session.user);
-    db.auth.onAuthStateChange((_e, s) => {
-      if (s) handleUser(s.user); else { user=null; setAdminNav(false); }
-    });
-  } catch (e) { console.warn('Auth session unavailable:', e); }
+    const { data, error } = await db.auth.getSession();
+    if (error) console.error('[NIEEE] Could not restore auth session:', error.message);
+    if (data?.session) await handleUser(data.session.user);
+  } catch (error) {
+    console.error('[NIEEE] Auth session restore failed:', error);
+  }
+  db.auth.onAuthStateChange((event, session) => {
+    // Defer database work until after Supabase's auth callback completes.
+    // Login itself handles SIGNED_IN; this listener keeps the UI in sync with sign-out.
+    setTimeout(async () => {
+      if (session?.user) {
+        await handleUser(session.user);
+      } else {
+        user = null;
+        setAdminNav(false);
+        if (event === 'SIGNED_OUT' && currentPage === 'admin') pAdminLogin();
+        if (event === 'SIGNED_OUT' && currentPage === 'member') pMemberLogin();
+      }
+    }, 0);
+  });
+  const isAccountSetup = ['invite','recovery'].includes(INITIAL_AUTH_QUERY.get('auth')) || /type=(invite|recovery)/i.test(INITIAL_AUTH_HASH);
+  const hash = isAccountSetup ? 'member-setup' : (location.hash.slice(1) || 'home');
+  renderPage(hash, false);
+  await handlePaymentReturn();
 });
 
 /* ── Config / settings ── */
 async function loadCfg() {
-  const { data, error } = await db.from('site_settings').select('*');
-  if (error) console.warn('site_settings:', error.message);
-  if (data) data.forEach(r => cfg[r.key] = r.value);
-  applyCfg();
+  try {
+    const { data, error } = await db.from('site_settings').select('*');
+    if (error) throw error;
+    if (data) data.forEach(r => cfg[r.key] = r.value);
+    applyCfg();
+  } catch (error) {
+    console.error('[NIEEE] Failed to load site_settings:', error.message || error);
+    toast('Site settings could not be loaded. Check Supabase connection and RLS.', 'error');
+  }
 }
 function applyCfg() {
   const s = (id, v) => { const e=document.getElementById(id); if(e&&v) e.textContent=v; };
@@ -477,624 +500,84 @@ function applyCfg() {
 /* ── Auth ── */
 async function handleUser(authUser) {
   if (!db || !authUser?.email) {
-    user = null;
-    setAdminNav(false);
-
-    return {
-      ok: false,
-      isAdmin: false,
-      message: 'Could not verify the signed-in account.'
-    };
+    user = null; setAdminNav(false);
+    return { ok:false, isAdmin:false, message:'Could not verify the signed-in account.' };
   }
-
   try {
-    const { data: adminRow, error } = await db
-      .from('admins')
-      .select('id,email,full_name,role')
-      .eq('email', authUser.email)
-      .maybeSingle();
-
+    const { data: adminRow, error } = await db.from('admins')
+      .select('id,email,full_name,role').eq('email', authUser.email).maybeSingle();
     if (error) {
-      console.error('Admin lookup failed:', error);
-
-      user = {
-        ...authUser,
-        isAdmin: false
-      };
-
+      console.error('[NIEEE] Admin authorization lookup failed:', error.message, error.code);
+      user = { ...authUser, isAdmin:false };
       setAdminNav(false);
-
-      return {
-        ok: false,
-        isAdmin: false,
-        message: 'Could not verify administrator access.'
-      };
+      return { ok:true, isAdmin:false, message:'Administrator status could not be checked; continuing as a non-admin member.' };
     }
-
-    user = {
-      ...authUser,
-      isAdmin: !!adminRow,
-      adminRole: adminRow?.role
-    };
-
+    user = adminRow ? { ...authUser, isAdmin:true, adminRole:adminRow.role } : { ...authUser, isAdmin:false };
     setAdminNav(!!adminRow);
-
-    return {
-      ok: true,
-      isAdmin: !!adminRow
-    };
-
+    return { ok:true, isAdmin:!!adminRow };
   } catch (error) {
-    console.error('Account verification failed:', error);
-
-    user = {
-      ...authUser,
-      isAdmin: false
-    };
-
+    console.error('[NIEEE] Unexpected admin authorization error:', error);
+    user = { ...authUser, isAdmin:false };
     setAdminNav(false);
-
-    return {
-      ok: false,
-      isAdmin: false,
-      message: 'Account verification failed.'
-    };
+    return { ok:false, isAdmin:false, message:'An unexpected error occurred while checking administrator access.' };
   }
 }
-   /* =========================================
-   PUBLIC MEMBER LOGIN AND REGISTRATION
-========================================= */
-
-function pMemberLogin(message = '', mode = 'login') {
-  const signup = mode === 'signup';
-
-  html(`
-    <div class="container"
-         style="max-width:520px;padding:3rem 1.25rem">
-
-      <div class="card">
-        <div class="cb">
-
-          <div style="text-align:center;margin-bottom:2rem">
-            <h2>${signup ? 'Create Member Account' : 'Member Login'}</h2>
-            <p style="margin-top:.5rem">
-              NIEEE ATBU Student Chapter
-            </p>
-          </div>
-
-          <div class="fe ${message ? 'show' : ''}"
-               id="ml-err"
-               style="display:${message ? 'block' : 'none'};
-                      margin-bottom:1rem">
-            ${escapeHTML(message)}
-          </div>
-
-          <form onsubmit="${signup
-            ? 'doMemberSignup(event)'
-            : 'doMemberLogin(event)'}">
-
-            ${signup ? `
-              <div class="fg">
-                <label class="fl">Full Name *</label>
-                <input class="fc"
-                       id="ml-name"
-                       type="text"
-                       required
-                       maxlength="120"
-                       autocomplete="name"
-                       placeholder="Enter your full name">
-              </div>
-
-              <div class="fg">
-                <label class="fl">Matric Number</label>
-                <input class="fc"
-                       id="ml-matric"
-                       type="text"
-                       maxlength="40"
-                       placeholder="e.g. 20/12345/EE">
-              </div>
-
-              <div class="fg">
-                <label class="fl">Department</label>
-                <input class="fc"
-                       id="ml-dept"
-                       type="text"
-                       maxlength="100"
-                       placeholder="Your department">
-              </div>
-
-              <div class="fg">
-                <label class="fl">Level</label>
-                <select class="fc" id="ml-level">
-                  <option value="">Select level</option>
-                  <option value="100">100</option>
-                  <option value="200">200</option>
-                  <option value="300">300</option>
-                  <option value="400">400</option>
-                  <option value="500">500</option>
-                  <option value="Graduate">Graduate</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            ` : ''}
-
-            <div class="fg">
-              <label class="fl">Email Address *</label>
-              <input class="fc"
-                     id="ml-email"
-                     type="email"
-                     required
-                     autocomplete="email"
-                     placeholder="you@example.com">
-            </div>
-
-            <div class="fg">
-              <label class="fl">Password *</label>
-              <input class="fc"
-                     id="ml-pass"
-                     type="password"
-                     required
-                     minlength="8"
-                     autocomplete="${signup
-                       ? 'new-password'
-                       : 'current-password'}"
-                     placeholder="${signup
-                       ? 'At least 8 characters'
-                       : 'Your password'}">
-            </div>
-
-            <button class="btn btn-gold w100 btn-lg"
-                    type="submit"
-                    id="ml-btn">
-              ${signup ? 'Create Account →' : 'Log In →'}
-            </button>
-
-          </form>
-
-          <p style="text-align:center;font-size:.88rem;margin-top:1.2rem">
-            ${signup
-              ? `Already have an account?
-                 <a onclick="pMemberLogin('', 'login')"
-                    style="color:var(--gold);cursor:pointer">
-                   Log in
-                 </a>`
-              : `New to the member portal?
-                 <a onclick="pMemberLogin('', 'signup')"
-                    style="color:var(--gold);cursor:pointer">
-                   Create an account
-                 </a>`
-            }
-          </p>
-
-          <p style="text-align:center;font-size:.8rem;margin-top:1rem">
-            Administrator?
-            <a onclick="go('admin')"
-               style="color:var(--gold);cursor:pointer">
-              Admin Login
-            </a>
-          </p>
-
-        </div>
-      </div>
-    </div>
-  `);
-}
-
-
-/* Display errors on the member form */
-function memberAuthError(message) {
-  const errorBox = document.getElementById('ml-err');
-
-  if (errorBox) {
-    errorBox.textContent = message;
-    errorBox.style.display = 'block';
-    errorBox.classList.add('show');
-  }
-}
-
-
-/* Register a new public member account */
-async function doMemberSignup(event) {
-  event.preventDefault();
-
-  if (!db) {
-    memberAuthError('Supabase is not configured.');
-    return;
-  }
-
-  const name = document.getElementById('ml-name').value.trim();
-  const email = document.getElementById('ml-email').value.trim();
-  const password = document.getElementById('ml-pass').value;
-
-  const button = document.getElementById('ml-btn');
-
-  if (!name) {
-    memberAuthError('Please enter your full name.');
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = 'Creating account…';
-
-  try {
-    const { data, error } = await db.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-          matric_number:
-            document.getElementById('ml-matric').value.trim(),
-          department:
-            document.getElementById('ml-dept').value.trim(),
-          level:
-            document.getElementById('ml-level').value
-        }
-      }
-    });
-
-    if (error) throw error;
-
-    if (data.session && data.user) {
-      const result = await handleUser(data.user);
-
-      if (!result.ok) {
-        throw new Error(
-          result.message || 'Could not verify your account.'
-        );
-      }
-
-      toast('Member account created successfully!', 'success');
-      go('member');
-
-    } else {
-      pMemberLogin(
-        'Your account has been created. Check your email for the Supabase confirmation link, then log in.',
-        'login'
-      );
-    }
-
-  } catch (error) {
-    console.error('Member registration error:', error);
-
-    const message = /already registered/i.test(error.message || '')
-      ? 'An account with this email already exists. Please log in.'
-      : (error.message || 'Registration failed. Please try again.');
-
-    memberAuthError(message);
-
-    button.disabled = false;
-    button.textContent = 'Create Account →';
-  }
-}
-
-
-/* Log in an existing member */
-async function doMemberLogin(event) {
-  event.preventDefault();
-
-  if (!db) {
-    memberAuthError('Supabase is not configured.');
-    return;
-  }
-
-  const email = document.getElementById('ml-email').value.trim();
-  const password = document.getElementById('ml-pass').value;
-  const button = document.getElementById('ml-btn');
-
-  button.disabled = true;
-  button.textContent = 'Logging in…';
-
-  try {
-    const { data, error } = await db.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) throw error;
-
-    const result = await handleUser(data.user);
-
-    if (!result.ok) {
-      throw new Error(
-        result.message || 'Could not verify your account.'
-      );
-    }
-
-    toast('You are logged in!', 'success');
-    go('member');
-
-  } catch (error) {
-    console.error('Member login error:', error);
-
-    const message = /invalid login credentials/i.test(
-      error.message || ''
-    )
-      ? 'Email or password is incorrect.'
-      : (error.message || 'Login failed. Please try again.');
-
-    memberAuthError(message);
-
-    button.disabled = false;
-    button.textContent = 'Log In →';
-  }
-}
-
-
-/* Member account page */
-async function pMemberPortal() {
-  if (!user) {
-    pMemberLogin();
-    return;
-  }
-
-  const signedInUser = user;
-
-  html(`
-    <div class="container"
-         style="max-width:900px;padding:3rem 1.25rem">
-
-      <div class="fxb"
-           style="gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
-
-        <div>
-          <p style="color:var(--gold);font-weight:700">
-            NIEEE ATBU
-          </p>
-
-          <h1>My Member Account</h1>
-
-          <p>
-            Welcome,
-            ${escapeHTML(
-              signedInUser.user_metadata?.full_name ||
-              signedInUser.email ||
-              'Member'
-            )}.
-          </p>
-        </div>
-
-        <button class="btn btn-ghost"
-                onclick="doMemberLogout()">
-          Log Out
-        </button>
-
-      </div>
-
-      <div class="card">
-        <div class="cb">
-          <h3>Account Details</h3>
-
-          <div id="member-profile-content"
-               style="margin-top:1rem">
-            ${loading('Loading your profile…')}
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:1rem">
-        <div class="cb">
-          <h3>Membership Information</h3>
-
-          <p style="margin-top:.75rem">
-            Creating a website account does not automatically
-            approve an official NIEEE membership application.
-          </p>
-
-          <p style="margin-top:.75rem">
-            To apply for membership, visit
-            <a onclick="go('membership')"
-               style="color:var(--gold);cursor:pointer">
-              Join NIEEE
-            </a>.
-          </p>
-        </div>
-      </div>
-
-    </div>
-  `);
-
-  try {
-    const { data, error } = await db
-      .from('member_profiles')
-      .select(
-        'full_name,matric_number,department,level,created_at'
-      )
-      .eq('id', signedInUser.id)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    const profile = data || {};
-    const element = document.getElementById(
-      'member-profile-content'
-    );
-
-    if (!element) return;
-
-    element.innerHTML = `
-      <p><strong>Name:</strong>
-        ${escapeHTML(
-          profile.full_name ||
-          signedInUser.user_metadata?.full_name ||
-          'Not provided'
-        )}
-      </p>
-
-      <p style="margin-top:.65rem">
-        <strong>Email:</strong>
-        ${escapeHTML(signedInUser.email || '')}
-      </p>
-
-      <p style="margin-top:.65rem">
-        <strong>Matric Number:</strong>
-        ${escapeHTML(profile.matric_number || 'Not provided')}
-      </p>
-
-      <p style="margin-top:.65rem">
-        <strong>Department:</strong>
-        ${escapeHTML(profile.department || 'Not provided')}
-      </p>
-
-      <p style="margin-top:.65rem">
-        <strong>Level:</strong>
-        ${escapeHTML(profile.level || 'Not provided')}
-      </p>
-    `;
-
-  } catch (error) {
-    console.error('Member profile error:', error);
-
-    const element = document.getElementById(
-      'member-profile-content'
-    );
-
-    if (element) {
-      element.textContent =
-        'Could not load your profile. Check the member_profiles table and its RLS policies.';
-    }
-  }
-}
-
-
-/* Log out a member */
-async function doMemberLogout() {
-  if (!db) return;
-
-  const { error } = await db.auth.signOut();
-
-  if (error) {
-    console.error('Logout error:', error);
-    toast('Could not log out. Please try again.', 'error');
-    return;
-  }
-
-  user = null;
-  setAdminNav(false);
-
-  toast('You have logged out.', 'info');
-  go('home');
-}
-
-
-/* Safely display user-provided text */
-function escapeHTML(value) {
-  return String(value ?? '').replace(/[&<>"']/g, character => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[character]);
-}
-   
 function setAdminNav(on) {
   ['admin-nav-btn','mob-admin-btn'].forEach(id => {
     const e = document.getElementById(id); if(e) e.style.display = on ? 'inline-flex' : 'none';
   });
-}
-
-/* ── View helpers (restored: html, navHL, loading, empty, imgURL) ── */
-function html(markup) {
-  const m = document.getElementById('main');
-  if (m) m.innerHTML = markup;
-}
-function navHL(page) {
-  document.querySelectorAll('.nav-a').forEach(a => a.classList.toggle('on', a.dataset.p === page));
-  document.querySelectorAll('.mob-a').forEach(a => {
-    const c = a.getAttribute('onclick') || '';
-    a.classList.toggle('on', c.indexOf("go('" + page + "')") === 0);
+  const signedIn = !!user;
+  ['member-nav-btn','mob-member-nav-btn'].forEach(id => {
+    const e = document.getElementById(id); if(e) e.style.display = signedIn ? 'inline-flex' : 'none';
   });
-}
-function loading(msg = 'Loading…') {
-  return `<div class="loading"><div class="spin"></div><span>${msg}</span></div>`;
-}
-function empty(icon, title, sub = '') {
-  return `<div class="empty"><div class="empty-ico">${icon}</div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>`;
-}
-function imgURL(bucket, path) {
-  try { return db.storage.from(bucket).getPublicUrl(path).data.publicUrl; }
-  catch (e) { return ''; }
+  ['member-login-btn','mob-member-login-btn'].forEach(id => {
+    const e = document.getElementById(id); if(e) e.style.display = signedIn ? 'none' : 'inline-flex';
+  });
 }
 
 /* ── Router ── */
-
-const PAGE_FNS = {
-  home: pHome,
-  about: pAbout,
-  team: pTeam,
-  events: pEvents,
-  announcements: pAnn,
-  resources: pRes,
-  membership: pMember,
-  'member-login': pMemberLogin,
-  member: pMemberPortal,
-  admin: pAdmin
-};
-
+const PAGE_FNS = { home:pHome, about:pAbout, team:pTeam, events:pEvents,
+  announcements:pAnn, resources:pRes, membership:pMember, 'member-login':pMemberLogin, 'member-setup':pMemberSetup, member:pMemberPortal, admin:pAdmin };
 const VALID_PAGES = new Set(Object.keys(PAGE_FNS));
 
-function renderPage(page, scroll = true) {
-  if (!VALID_PAGES.has(page)) {
-    page = 'home';
-  }
-
+function renderPage(page, scroll=true) {
+  if (!VALID_PAGES.has(page)) page = 'home';
   currentPage = page;
-
-  if (scroll) {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }
-
+  if (scroll) window.scrollTo({ top:0, behavior:'smooth' });
   navHL(page);
   closeMob();
-
-  // Admin access remains separate.
   if (page === 'admin' && (!user || !user.isAdmin)) {
     pAdminLogin();
     return;
   }
-
-  // Member account requires a signed-in user.
-  if (page === 'member' && !user) {
-    pMemberLogin();
-    return;
-  }
-
-  try {
-    Promise.resolve(PAGE_FNS[page]()).catch(err => showPageError(page, err));
-  } catch (err) {
-    showPageError(page, err);
-  }
+  if (page === 'member' && !user) { pMemberLogin(); return; }
+  PAGE_FNS[page]();
 }
-
-function showPageError(page, err) {
-  console.error('Page "' + page + '" failed:', err);
-  const msg = empty('⚠️', 'Could not load this content', 'Please check your connection and try again.');
-  // Keep the page layout; only replace the spinners that never finished.
-  const spinners = document.querySelectorAll('#main .loading');
-  if (spinners.length) { spinners.forEach(el => el.outerHTML = msg); return; }
-  html(`<div class="container">${msg}<p class="tc"><a class="btn btn-gold btn-sm" onclick="go('home')">Back to Home</a></p></div>`);
-}
-
 function go(page) {
-  if (!VALID_PAGES.has(page)) {
-    page = 'home';
-  }
-
+  if (!VALID_PAGES.has(page)) page = 'home';
   if (location.hash !== `#${page}`) {
-    location.hash = page;
+    location.hash = page; // hashchange handler renders the destination
     return;
   }
-
   renderPage(page);
 }
-
 window.addEventListener('hashchange', () => {
   renderPage(location.hash.slice(1) || 'home', false);
 });
+function navHL(p) {
+  document.querySelectorAll('.nav-a,.mob-a').forEach(e => e.classList.toggle('on', e.dataset.p===p));
+}
+function html(h) { document.getElementById('main').innerHTML = h; }
+function loading(m='Loading…') { return `<div class="loading"><div class="spin"></div><span>${m}</span></div>`; }
+function empty(ico, m, sub='') {
+  return `<div class="empty"><div class="empty-ico">${ico}</div><h3 style="color:var(--muted)">${m}</h3>${sub?`<p style="margin-top:.5rem">${sub}</p>`:''}</div>`;
+}
+function fd(d) { return d ? new Date(d).toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) : ''; }
+function ft(d) { return d ? new Date(d).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'}) : ''; }
+function imgURL(bkt, path) {
+  if (!path) return '';
+  return `${SUPABASE_URL}/storage/v1/object/public/${bkt}/${path}`;
+}
 
 /* ── Mobile nav ── */
 let mobOpen = false;
@@ -1506,6 +989,14 @@ function pMember() {
               </select>
             </div>
           </div>
+          <div class="fg"><label class="fl" for="mem-category">Membership Category *</label>
+            <select class="fc" id="mem-category" name="member_category" required onchange="updateMembershipFee()">
+              <option value="new" selected>New member — ₦3,000</option>
+              <option value="returning">Returning member — ₦1,500</option>
+            </select>
+            <p style="font-size:.82rem;color:var(--muted);margin-top:.4rem">Returning-member status will be checked by the chapter after payment. Choose the category that honestly applies to you.</p>
+            <p style="font-size:.95rem;margin-top:.55rem"><strong>Fee payable: <span id="mem-fee-display">₦3,000</span></strong></p>
+          </div>
           <div class="fg"><label class="fl">Department *</label>
             <select class="fc" name="dept" required>
               <option value="">Select department</option>
@@ -1515,43 +1006,298 @@ function pMember() {
             </select>
           </div>
           <div class="fe show" id="mem-err" style="display:none;margin-bottom:1rem"></div>
-          <button class="btn btn-gold w100 btn-lg" type="submit" id="mem-btn">Submit Application →</button>
+          <button class="btn btn-gold w100 btn-lg" type="submit" id="mem-btn">Apply & Pay ₦3,000 →</button>
         </form>
         <div id="mem-ok" style="display:none;text-align:center;padding:2rem">
-          <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
-          <h3>Application Submitted!</h3>
-          <p style="margin-top:.7rem">Our membership coordinator will review your application and contact you shortly.</p>
-          <a class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</a>
+          <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+          <h3>Application Saved</h3>
+          <p style="margin-top:.7rem">Continue to Paystack to complete your membership fee payment. Your payment will be verified automatically.</p>
+          <p id="mem-pay-error" class="fe" style="display:none;margin-top:1rem;text-align:left"></p>
+          <button class="btn btn-gold w100" style="margin-top:1.25rem" id="mem-pay-btn" type="button" onclick="startMembershipCheckout()">Continue to Paystack →</button>
+          <p style="font-size:.82rem;color:var(--muted);margin-top:1rem">After payment, the chapter will review your details. Approved members receive an email invitation to set a password.</p>
         </div>
       </div></div>
     </div>
   </div>`);
 }
+let pendingMemberPayment = null;
+
+function updateMembershipFee() {
+  const category = document.getElementById('mem-category')?.value || 'new';
+  const fee = category === 'returning' ? 1500 : 3000;
+  const feeText = `₦${fee.toLocaleString('en-NG')}`;
+  const feeNode = document.getElementById('mem-fee-display');
+  const submitButton = document.getElementById('mem-btn');
+  if (feeNode) feeNode.textContent = feeText;
+  if (submitButton) submitButton.textContent = `Apply & Pay ${feeText} →`;
+}
+
 async function submitMem(e) {
   e.preventDefault();
-  const f=e.target, btn=document.getElementById('mem-btn'), err=document.getElementById('mem-err');
-  btn.disabled=true; btn.textContent='Submitting…'; err.style.display='none';
-  const fd=new FormData(f);
+  const f = e.target;
+  const btn = document.getElementById('mem-btn');
+  const err = document.getElementById('mem-err');
+  if (!db) { err.textContent = 'The application service is unavailable. Please try again later.'; err.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Saving application…';
+  err.style.display = 'none';
+  const fd = new FormData(f);
+  const payload = {
+    full_name: `${fd.get('fn') || ''} ${fd.get('ln') || ''}`.trim(),
+    email: String(fd.get('email') || '').trim(),
+    phone: String(fd.get('phone') || '').trim(),
+    matric_number: String(fd.get('matric') || '').trim(),
+    department: String(fd.get('dept') || '').trim(),
+    level: String(fd.get('level') || '').trim(),
+    member_category: String(fd.get('member_category') || 'new').trim()
+  };
   try {
-    const { error } = await db.from('membership_applications').insert({
-      full_name: `${fd.get('fn')} ${fd.get('ln')}`.trim(),
-      email: fd.get('email'), phone: fd.get('phone'),
-      matric_number: fd.get('matric'), department: fd.get('dept'), level: fd.get('level')
+    const { data, error } = await db.functions.invoke('membership-submit', { body: payload });
+    if (error) throw error;
+    if (!data || data.ok !== true || !data.applicationId || !data.paymentToken) {
+      throw new Error(data?.message || 'The application was not saved. Please try again.');
+    }
+    pendingMemberPayment = {
+      applicationId: data.applicationId,
+      paymentToken: data.paymentToken,
+      memberCategory: data.memberCategory || payload.member_category,
+      amountNaira: Number(data.amountNaira) || (payload.member_category === 'returning' ? 1500 : 3000)
+    };
+    f.style.display = 'none';
+    document.getElementById('mem-ok').style.display = 'block';
+    const payButton = document.getElementById('mem-pay-btn');
+    if (payButton) { payButton.disabled = true; payButton.textContent = 'Opening secure checkout…'; }
+    await startMembershipCheckout();
+  } catch (ex) {
+    console.error('[NIEEE] Application/payment start failed:', ex);
+    err.textContent = ex?.message || 'Submission failed. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    updateMembershipFee();
+    toast('We could not start the application. Please check your details and try again.', 'error');
+  }
+}
+
+async function startMembershipCheckout() {
+  const payButton = document.getElementById('mem-pay-btn');
+  const err = document.getElementById('mem-pay-error');
+  if (!pendingMemberPayment) {
+    if (err) { err.textContent = 'This payment session is no longer available. Please contact NIEEE before submitting another application.'; err.style.display = 'block'; err.classList.add('show'); }
+    return;
+  }
+  if (payButton) { payButton.disabled = true; payButton.textContent = 'Preparing Paystack…'; }
+  if (err) { err.style.display = 'none'; err.classList.remove('show'); err.textContent = ''; }
+  try {
+    const { data, error } = await db.functions.invoke('membership-initiate-payment', {
+      body: { applicationId: pendingMemberPayment.applicationId, paymentToken: pendingMemberPayment.paymentToken }
     });
     if (error) throw error;
-    f.style.display='none'; document.getElementById('mem-ok').style.display='block';
-    toast('Application submitted! 🎉','success');
-  } catch(ex) {
-    err.textContent='Submission failed. Please try again.'; err.style.display='block';
-    btn.disabled=false; btn.textContent='Submit Application →';
-    toast('Submission failed.','error');
+    if (!data?.authorization_url) throw new Error(data?.message || 'Paystack did not return a checkout link.');
+    window.location.assign(data.authorization_url);
+  } catch (ex) {
+    console.error('[NIEEE] Direct Paystack checkout failed:', ex);
+    if (err) {
+      err.textContent = `Your application was saved, but checkout could not start. ${ex?.message || 'Please retry.'} Do not submit the form again; use the retry button below.`;
+      err.style.display = 'block'; err.classList.add('show');
+    }
+    if (payButton) { payButton.disabled = false; payButton.textContent = 'Retry Payment →'; }
+    toast('Application saved; payment checkout needs a retry.', 'error', 6500);
+  }
+}
+
+/* ══════════════════════════════════════════
+   MEMBER LOGIN / REGISTRATION / PORTAL
+══════════════════════════════════════════ */
+function pMemberLogin(message = '') {
+  html(`<div style="min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding:2rem">
+    <div class="card" style="width:100%;max-width:480px"><div class="cb">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <img src="${NIEEE_LOGO}" alt="NIEEE" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);background:#fff;padding:3px;margin:0 auto 1rem">
+        <h2>Member Login</h2>
+        <p>Sign in after completing the account setup invitation sent by NIEEE ATBU.</p>
+      </div>
+      <div class="fe ${message?'show':''}" id="ml-err" style="margin-bottom:1rem">${escapeHTML(message)}</div>
+      <form onsubmit="doMemberLogin(event)">
+        <div class="fg"><label class="fl">Email Address *</label><input class="fc" id="ml-email" type="email" required autocomplete="email" placeholder="you@example.com"></div>
+        <div class="fg"><label class="fl">Password *</label><input class="fc" id="ml-pass" type="password" required autocomplete="current-password" placeholder="Your password"></div>
+        <button class="btn btn-gold w100 btn-lg" type="submit" id="ml-btn">Log In →</button>
+      </form>
+      <p style="text-align:center;font-size:.88rem;margin-top:1rem"><a onclick="sendMemberPasswordReset()" style="color:var(--gold);cursor:pointer">Forgot your password?</a></p>
+      <p style="text-align:center;font-size:.88rem;margin-top:1rem">New applicant? <a onclick="go('membership')" style="color:var(--gold);cursor:pointer">Apply for membership</a>. No password is required to apply.</p>
+      <p style="text-align:center;font-size:.78rem;margin-top:.8rem;color:var(--muted)">Administrators use the separate <a onclick="go('admin')" style="color:var(--gold);cursor:pointer">Admin Login</a>.</p>
+    </div></div>
+  </div>`);
+}
+
+function pMemberSetup() {
+  if (!user) {
+    html(`<div class="container" style="max-width:560px;padding:3rem 1.25rem"><div class="card"><div class="cb"><h2>Complete Account Setup</h2><p style="margin-top:.8rem">Open the invitation or password-reset link sent to your email again. If the link has expired, request a password reset from Member Login.</p><a class="btn btn-gold" style="margin-top:1.2rem" onclick="go('member-login')">Go to Member Login</a></div></div></div>`);
+    return;
+  }
+  html(`<div class="container" style="max-width:520px;padding:3rem 1.25rem"><div class="card"><div class="cb">
+    <h2>Set Your Password</h2><p style="margin:.7rem 0 1.4rem">Choose a password for your NIEEE ATBU account. Use at least 8 characters.</p>
+    <div class="fe" id="setup-err" style="margin-bottom:1rem"></div>
+    <form onsubmit="doMemberSetPassword(event)">
+      <div class="fg"><label class="fl">New password *</label><input class="fc" id="setup-pass" type="password" minlength="8" autocomplete="new-password" required></div>
+      <div class="fg"><label class="fl">Confirm password *</label><input class="fc" id="setup-pass-confirm" type="password" minlength="8" autocomplete="new-password" required></div>
+      <button class="btn btn-gold w100" id="setup-btn" type="submit">Save Password →</button>
+    </form>
+  </div></div></div>`);
+}
+
+async function doMemberSetPassword(e) {
+  e.preventDefault();
+  const password = document.getElementById('setup-pass').value;
+  const confirm = document.getElementById('setup-pass-confirm').value;
+  const err = document.getElementById('setup-err');
+  const btn = document.getElementById('setup-btn');
+  if (password.length < 8 || password !== confirm) {
+    err.textContent = password !== confirm ? 'The passwords do not match.' : 'Use at least 8 characters.';
+    err.style.display = 'block'; err.classList.add('show'); return;
+  }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { error } = await db.auth.updateUser({ password });
+    if (error) throw error;
+    toast('Password set. Checking membership access…', 'success');
+    go('member');
+  } catch (ex) {
+    err.textContent = ex?.message || 'Could not set the password. Reopen the invitation link and try again.';
+    err.style.display = 'block'; err.classList.add('show');
+    btn.disabled = false; btn.textContent = 'Save Password →';
+  }
+}
+
+async function sendMemberPasswordReset() {
+  const email = document.getElementById('ml-email')?.value.trim();
+  if (!email) { memberAuthError('Enter your email address first, then select Forgot your password.'); return; }
+  try {
+    const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: `${NIEEE_SITE_URL}?auth=recovery` });
+    if (error) throw error;
+    toast('If the account exists, a password-reset link has been sent.', 'success');
+  } catch (ex) {
+    memberAuthError(ex?.message || 'Could not send a password-reset email.');
+  }
+}
+
+function memberAuthError(message) {
+  const err=document.getElementById('ml-err');
+  if(err){err.textContent=message;err.classList.add('show');err.style.display='block';}
+}
+async function doMemberSignup(e) {
+  e.preventDefault();
+  if(!db){memberAuthError('Supabase is not configured.');return;}
+  const name=document.getElementById('ml-name').value.trim();
+  const email=document.getElementById('ml-email').value.trim();
+  const password=document.getElementById('ml-pass').value;
+  const btn=document.getElementById('ml-btn');
+  if(!name){memberAuthError('Please enter your full name.');return;}
+  btn.disabled=true;btn.textContent='Creating account…';
+  try {
+    const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name:name,matric_number:document.getElementById('ml-matric').value.trim(),department:document.getElementById('ml-dept').value.trim(),level:document.getElementById('ml-level').value}}});
+    if(error)throw error;
+    if(data.session && data.user){
+      await handleUser(data.user);
+      toast('Member account created. Welcome!','success');
+      go('member');
+    } else {
+      pMemberLogin('Account created. Check your email for the Supabase confirmation link, then return here to log in.','login');
+    }
+  } catch(err) {
+    memberAuthError(/already registered/i.test(err.message||'')?'An account with this email already exists. Please log in instead.':(err.message||'Could not create account. Please try again.'));
+    btn.disabled=false;btn.textContent='Create Account →';
+  }
+}
+async function doMemberLogin(e) {
+  e.preventDefault();
+  if(!db){memberAuthError('Supabase is not configured.');return;}
+  const email=document.getElementById('ml-email').value.trim();
+  const password=document.getElementById('ml-pass').value;
+  const btn=document.getElementById('ml-btn');
+  btn.disabled=true;btn.textContent='Logging in…';
+  try {
+    const {data,error}=await db.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    await handleUser(data.user);
+    toast('You are logged in.','success');go('member');
+  } catch(err) {
+    memberAuthError(/invalid login credentials/i.test(err.message||'')?'Email or password is incorrect.':(err.message||'Login failed. Check your email and password.'));
+    btn.disabled=false;btn.textContent='Log In →';
+  }
+}
+async function pMemberPortal() {
+  if (!user) { pMemberLogin(); return; }
+  const signedInUser = user;
+  html(`<div class="container" style="max-width:900px;padding:3rem 1.25rem"><div class="fxb" style="gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem"><div><p style="color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:.8rem">NIEEE ATBU</p><h1>My Member Account</h1><p>Welcome, ${escapeHTML(signedInUser.user_metadata?.full_name || signedInUser.email || 'member')}.</p></div><button class="btn btn-ghost" onclick="doMemberLogout()">Log Out</button></div><div id="member-access-content"><div class="card"><div class="cb">${loading('Verifying your membership status…')}</div></div></div></div>`);
+  const el = document.getElementById('member-access-content');
+  try {
+    // This server-side check fails closed; a free-standing Auth account alone is not member access.
+    const { data, error } = await db.functions.invoke('membership-access');
+    if (error) throw error;
+    if (!data?.hasAccess) {
+      const status = data?.applicationStatus || 'not found';
+      const payment = data?.paymentStatus || 'unpaid';
+      el.innerHTML = `<div class="card"><div class="cb"><h2>Membership Access Pending</h2><p style="margin-top:.8rem">Your member area is available after your application is approved and the required payment is verified.</p><p style="margin-top:.8rem"><strong>Application:</strong> ${escapeHTML(status)} &nbsp; <strong>Payment:</strong> ${escapeHTML(payment)}</p><p style="margin-top:.8rem">If you have paid, wait for verification and chapter review. If your application is approved, check your email for the secure account invitation from NIEEE ATBU.</p><button class="btn btn-out" style="margin-top:1rem" onclick="go('membership')">Membership Application</button></div></div>`;
+      return;
+    }
+    const meta = signedInUser.user_metadata || {};
+    el.innerHTML = `<div class="grid2"><div class="card"><div class="cb"><h3>Account Details</h3><p style="margin-top:1rem"><strong>Name:</strong> ${escapeHTML(meta.full_name || 'Not provided')}</p><p style="margin-top:.65rem"><strong>Email:</strong> ${escapeHTML(signedInUser.email || '')}</p><p style="margin-top:.65rem"><strong>Matric number:</strong> ${escapeHTML(meta.matric_number || 'Not provided')}</p><p style="margin-top:.65rem"><strong>Department:</strong> ${escapeHTML(meta.department || 'Not provided')}</p><p style="margin-top:.65rem"><strong>Level:</strong> ${escapeHTML(meta.level || 'Not provided')}</p></div></div><div class="card"><div class="cb"><h3>Membership Status</h3><span class="badge bg-green" style="margin-top:1rem">Approved and paid</span><p style="margin-top:.8rem">Your membership application is approved and payment has been verified.</p></div></div></div>`;
+  } catch (ex) {
+    console.error('[NIEEE] Membership access check failed:', ex);
+    el.innerHTML = `<div class="card"><div class="cb"><h3>Could not verify membership access</h3><p style="margin-top:.8rem">Please refresh and try again. If the issue continues, contact the chapter administrator.</p></div></div>`;
+  }
+}
+
+async function doMemberLogout(){await db.auth.signOut();user=null;setAdminNav(false);toast('Logged out.','info');go('home');}
+
+/* ── Paystack return verification ── */
+async function handlePaymentReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const reference = params.get('reference') || params.get('trxref');
+  if (!reference || !db) return;
+  try {
+    const { data, error } = await db.functions.invoke('membership-verify-payment', { body: { reference } });
+    if (error) throw error;
+    if (data?.paid) {
+      html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">✅</div><h1 style="margin-top:1rem">Payment Received</h1><p style="margin-top:1rem">Your Paystack payment has been verified. Your membership application is now awaiting review by the NIEEE ATBU team. If approved, you will receive an email invitation to set your password and sign in.</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p><button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</button></div></div></div>`);
+      toast('Payment verified successfully.', 'success', 5000);
+    } else {
+      html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">⏳</div><h1 style="margin-top:1rem">Payment Not Confirmed Yet</h1><p style="margin-top:1rem">${escapeHTML(data?.message || 'We could not confirm your payment yet.')}</p><p style="margin-top:.8rem">Do not pay again immediately if your account was charged. Contact NIEEE ATBU and provide this reference so the team can check it.</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p><button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</button></div></div></div>`);
+      toast('Payment is not confirmed yet. Do not pay again immediately.', 'error', 6500);
+    }
+  } catch (ex) {
+    console.error('[NIEEE] Payment return verification failed:', ex);
+    html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><h1>We Could Not Confirm Payment Yet</h1><p style="margin-top:1rem">Do not pay again immediately if you were charged. Contact NIEEE ATBU with your Paystack reference and the team will check the transaction.</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p><button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</button></div></div></div>`);
+    toast('We could not confirm the payment. Please contact NIEEE.', 'error', 8000);
+  } finally {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('reference');
+    url.searchParams.delete('trxref');
+    url.searchParams.delete('payment');
+    history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+  }
+}
+
+/* Send an account invitation only after both approval and payment are confirmed. */
+async function sendMemberInvite(applicationId, button) {
+  if (!user?.isAdmin) { toast('Administrator login required.', 'error'); return; }
+  if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+  try {
+    const { data, error } = await db.functions.invoke('membership-invite', { body: { applicationId } });
+    if (error) throw error;
+    toast(data?.message || 'Account invitation sent.', 'success', 6500);
+  } catch (ex) {
+    console.error('[NIEEE] Member invitation failed:', ex);
+    toast(ex?.message || 'Could not send invitation. Check Auth email settings and Edge Function logs.', 'error', 7500);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Send Account Invite'; }
   }
 }
 
 /* ══════════════════════════════════════════
    ADMIN LOGIN
 ══════════════════════════════════════════ */
-function pAdminLogin() {
+function pAdminLogin(message = '') {
   html(`<div style="min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding:2rem">
     <div class="card" style="width:100%;max-width:420px"><div class="cb">
       <div style="text-align:center;margin-bottom:2rem">
@@ -1564,7 +1310,7 @@ function pAdminLogin() {
         <input class="fc" id="al-email" type="email" placeholder="admin@example.com"></div>
       <div class="fg"><label class="fl">Password</label>
         <input class="fc" id="al-pass" type="password" placeholder="Your password"></div>
-      <div class="fe" id="al-err" style="margin-bottom:1rem"></div>
+      <div class="fe" id="al-err" style="margin-bottom:1rem">${message ? message : ''}</div>
       <button class="btn btn-gold w100" onclick="doLogin()" id="al-btn">Log In →</button>
       <p style="text-align:center;font-size:.8rem;margin-top:1rem;color:var(--muted)">
         Only authorized administrators can access this page.</p>
@@ -1572,21 +1318,29 @@ function pAdminLogin() {
   </div>`);
 }
 async function doLogin() {
-  const email=document.getElementById('al-email').value.trim();
-  const pass=document.getElementById('al-pass').value;
+  const email=document.getElementById('al-email')?.value.trim();
+  const pass=document.getElementById('al-pass')?.value;
   const btn=document.getElementById('al-btn'), err=document.getElementById('al-err');
+  if (!db) { if(err){err.textContent='Supabase is not configured. Update the CONFIG values at the top of this file.';err.classList.add('show');} return; }
   if(!email||!pass){ err.textContent='Enter email and password.'; err.classList.add('show'); return; }
   btn.disabled=true; btn.textContent='Logging in…';
-  const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
-  if (error) {
-    err.textContent='Invalid credentials.'; err.classList.add('show');
-    btn.disabled=false; btn.textContent='Log In →'; return;
-  }
-  await handleUser(data.user);
-  if (user&&user.isAdmin) { toast('Welcome back! 👋','success'); pAdmin(); }
-  else {
-    await db.auth.signOut();
-    err.textContent='Your account is not authorized as admin.'; err.classList.add('show');
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password:pass });
+    if (error) throw error;
+    const result = await handleUser(data.user);
+    if (result.ok && result.isAdmin) {
+      toast('Welcome back! 👋','success');
+      currentPage = 'admin';
+      if (location.hash !== '#admin') history.replaceState(null, '', `${location.pathname}${location.search}#admin`);
+      navHL('admin'); pAdmin();
+    } else {
+      await db.auth.signOut();
+      if(err){err.textContent = result.message || 'Your account is not authorized as admin. Ask the site administrator to add your exact Auth email to public.admins.';err.classList.add('show');}
+      btn.disabled=false; btn.textContent='Log In →';
+    }
+  } catch (error) {
+    console.error('[NIEEE] Login failed:', error.message || error);
+    if(err){err.textContent = /invalid login credentials/i.test(error.message || '') ? 'Email or password is incorrect.' : `Login failed: ${error.message || 'Please try again.'}`;err.classList.add('show');}
     btn.disabled=false; btn.textContent='Log In →';
   }
 }
@@ -1970,35 +1724,57 @@ async function saveTm() {
 
 /* ── Admin: Membership Applications ── */
 async function aMemberHTML() {
-  const { data } = await db.from('membership_applications').select('*').order('applied_at',{ascending:false});
+  const { data, error } = await db.from('membership_applications').select('*').order('applied_at',{ascending:false});
+  if (error) { console.error('[NIEEE] Failed to load membership applications:', error.message); return `<div class="card"><div class="cb"><h2>Could not load applications</h2><p>${escapeHTML(error.message)}</p></div></div>`; }
   const sc={pending:'bg-gold',approved:'bg-green',rejected:'bg-red'};
+  const fees={new:3000,returning:1500};
   return `<div>
-    <h2 style="margin-bottom:1.5rem">Membership Applications</h2>
+    <h2 style="margin-bottom:.5rem">Membership Applications</h2><p style="margin-bottom:1.5rem">Students pay online when they apply. Review paid applications here, then approve eligible members and send the account invitation. If a paid application is rejected, the refund must be handled manually in Paystack.</p>
     <div class="tw"><table>
-      <thead><tr><th>Name</th><th>Email</th><th>Matric</th><th>Dept.</th><th>Level</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-      <tbody>${!(data&&data.length)?`<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted)">No applications yet.</td></tr>`:
-      (data||[]).map(a=>`<tr>
-        <td><strong>${a.full_name}</strong></td>
-        <td style="font-size:.84rem">${a.email}</td>
-        <td style="font-size:.84rem">${a.matric_number||'—'}</td>
-        <td style="font-size:.84rem">${a.department||'—'}</td>
-        <td>${a.level||'—'}</td>
-        <td><span class="badge ${sc[a.status]||'bg-gold'}">${a.status}</span></td>
-        <td style="font-size:.78rem;color:var(--muted)">${fd(a.applied_at)}</td>
-        <td><div style="display:flex;gap:.35rem">
-          <button class="btn btn-success btn-sm" onclick="appStatus(${a.id},'approved',this)">Approve</button>
-          <button class="btn btn-danger btn-sm"  onclick="appStatus(${a.id},'rejected',this)">Reject</button>
-        </div></td>
-      </tr>`).join('')}</tbody>
+      <thead><tr><th>Name</th><th>Email</th><th>Matric</th><th>Dept.</th><th>Level</th><th>Member Type</th><th>Fee</th><th>Application</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>${!(data&&data.length)?`<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--muted)">No applications yet.</td></tr>`:
+      (data||[]).map(a=>{
+        const category=a.member_category==='returning'?'Returning':'New';
+        const amount=Number(a.payment_amount_kobo)>0?Number(a.payment_amount_kobo)/100:(fees[a.member_category]||fees.new);
+        const payment=a.payment_status||'unpaid';
+        const actionButtons = payment==='paid' && a.status==='pending'
+          ? `<button class="btn btn-success btn-sm" onclick="appStatus('${String(a.id).replace(/'/g,'')}','approved',this)">Approve</button><button class="btn btn-danger btn-sm" onclick="appStatus('${String(a.id).replace(/'/g,'')}','rejected',this)">Reject / Refund</button>`
+          : payment==='paid' && a.status==='approved'
+            ? `<button class="btn btn-gold btn-sm" onclick="sendMemberInvite('${String(a.id).replace(/'/g,'')}',this)">Send Account Invite</button>`
+            : a.status==='rejected' && payment==='paid'
+              ? `<span class="badge bg-red">Refund required</span>`
+              : `<span style="font-size:.78rem;color:var(--muted)">Awaiting payment</span>`;
+        return `<tr>
+          <td><strong>${escapeHTML(a.full_name||'')}</strong></td>
+          <td style="font-size:.84rem">${escapeHTML(a.email||'')}</td>
+          <td style="font-size:.84rem">${escapeHTML(a.matric_number||'—')}</td>
+          <td style="font-size:.84rem">${escapeHTML(a.department||'—')}</td>
+          <td>${escapeHTML(a.level||'—')}</td>
+          <td>${category}</td>
+          <td>₦${amount.toLocaleString('en-NG')}</td>
+          <td><span class="badge ${sc[a.status]||'bg-gold'}">${escapeHTML(a.status||'pending')}</span></td>
+          <td><span class="badge ${payment==='paid'?'bg-green':(payment==='pending'?'bg-blue':'bg-gold')}">${escapeHTML(payment)}</span></td>
+          <td style="font-size:.78rem;color:var(--muted)">${fd(a.applied_at)}</td>
+          <td><div style="display:flex;gap:.35rem;flex-wrap:wrap">${actionButtons}</div></td>
+        </tr>`;
+      }).join('')}</tbody>
     </table></div>
   </div>`;
 }
 async function appStatus(id,status,btn) {
+  if (status==='approved') {
+    const { data: app, error: lookupError } = await db.from('membership_applications').select('payment_status').eq('id',id).maybeSingle();
+    if (lookupError || app?.payment_status!=='paid') { toast('Only approve an application after its payment is verified.','error'); return; }
+  }
+  if (status==='rejected') {
+    const { data: app, error: lookupError } = await db.from('membership_applications').select('payment_status').eq('id',id).maybeSingle();
+    if (!lookupError && app?.payment_status==='paid' && !confirm('This applicant has paid. Rejecting does NOT issue an automatic refund. Continue only if you will handle the refund manually in Paystack.')) return;
+  }
   btn.disabled=true;
   const { error } = await db.from('membership_applications').update({
     status,reviewed_at:new Date().toISOString(),reviewed_by:user.email
   }).eq('id',id);
-  if(error){ toast('Update failed.','error'); btn.disabled=false; return; }
+  if(error){ toast('Update failed. Check administrator permissions.','error'); btn.disabled=false; return; }
   toast(`Application ${status}!`,'success'); aLoad('membership');
 }
 
