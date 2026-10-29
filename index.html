@@ -53,6 +53,9 @@ p{color:var(--muted);line-height:1.75}
 .container{max-width:1140px;margin:0 auto;padding:0 1.25rem}
 .section{padding:4.5rem 0}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+.membership-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:3rem;align-items:start}
+.membership-layout>*{min-width:0}
+.membership-layout .membership-form-card{min-width:0}
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem}
 .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem}
 .fxb{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
@@ -264,6 +267,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
   .aside-a .albl{display:none}
   .aside-a{justify-content:center;padding:.9rem}
 }
+@media(max-width:820px){
+  .membership-layout{display:flex;flex-direction:column;gap:1.25rem}
+  .membership-layout .membership-form-card{order:-1;width:100%}
+  .membership-layout .cb{padding:1.1rem}
+  .membership-layout .irow{grid-template-columns:minmax(0,1fr)}
+  .membership-layout .btn{white-space:normal}
+}
 @media(max-width:700px){
   .nav-links,.nav-right .btn{display:none}
   .hbg{display:flex}
@@ -468,7 +478,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 0);
   });
   const isAccountSetup = ['invite','recovery'].includes(INITIAL_AUTH_QUERY.get('auth')) || /type=(invite|recovery)/i.test(INITIAL_AUTH_HASH);
-  const hash = isAccountSetup ? 'member-setup' : (location.hash.slice(1) || 'home');
+  const isSignupConfirmation = INITIAL_AUTH_QUERY.get('auth') === 'signup-confirmed' || /type=signup/i.test(INITIAL_AUTH_HASH);
+  const hash = isAccountSetup ? 'member-setup' : (isSignupConfirmation ? 'member' : (location.hash.slice(1) || 'home'));
   renderPage(hash, false);
   await handlePaymentReturn();
 });
@@ -568,6 +579,11 @@ function navHL(p) {
   document.querySelectorAll('.nav-a,.mob-a').forEach(e => e.classList.toggle('on', e.dataset.p===p));
 }
 function html(h) { document.getElementById('main').innerHTML = h; }
+// Escape dynamic text before inserting it into HTML templates.
+function escapeHTML(value) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(value ?? '').replace(/[&<>"']/g, ch => map[ch]);
+}
 function loading(m='Loading…') { return `<div class="loading"><div class="spin"></div><span>${m}</span></div>`; }
 function empty(ico, m, sub='') {
   return `<div class="empty"><div class="empty-ico">${ico}</div><h3 style="color:var(--muted)">${m}</h3>${sub?`<p style="margin-top:.5rem">${sub}</p>`:''}</div>`;
@@ -950,8 +966,8 @@ function pMember() {
   html(`<div class="container">
     <div class="ph"><div class="lbl">Join the Chapter</div><h1>Membership Application</h1>
       <p>Complete the form below to apply for NIEEE ATBU membership.</p></div>
-    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:3rem;align-items:start">
-      <div>
+    <div class="membership-layout">
+      <div class="membership-benefits">
         <div class="lbl" style="margin-bottom:1rem">Member Benefits</div>
         ${['✅ Access to all chapter workshops and seminars','✅ IEEE student membership pathway',
            '✅ Mentorship from professionals','✅ Priority access to competitions',
@@ -965,7 +981,7 @@ function pMember() {
             ${cfg.contact_email||'nieee@atbu.edu.ng'}</a>
         </div></div>
       </div>
-      <div class="card"><div class="cb">
+      <div class="card membership-form-card"><div class="cb">
         <h2 style="margin-bottom:1.5rem">Application Form</h2>
         <form id="mem-form" onsubmit="submitMem(event)">
           <div class="irow">
@@ -975,7 +991,13 @@ function pMember() {
               <input class="fc" name="ln" placeholder="Last" required></div>
           </div>
           <div class="fg"><label class="fl">Email Address *</label>
-            <input class="fc" name="email" type="email" placeholder="you@atbu.edu.ng" required></div>
+            <input class="fc" name="email" type="email" placeholder="you@atbu.edu.ng" value="${escapeHTML(user?.email || '')}" ${user?.email ? 'readonly' : ''} required autocomplete="email"></div>
+          ${!user ? `<div class="irow">
+            <div class="fg"><label class="fl">Create Password *</label>
+              <input class="fc" name="account_password" type="password" minlength="8" required autocomplete="new-password" placeholder="At least 8 characters"></div>
+            <div class="fg"><label class="fl">Confirm Password *</label>
+              <input class="fc" name="account_password_confirm" type="password" minlength="8" required autocomplete="new-password" placeholder="Repeat your password"></div>
+          </div><p style="font-size:.82rem;color:var(--muted);margin:-.35rem 0 1rem">Your account is created during application. Use a password you can remember; we never send it to the payment provider.</p>` : `<div class="card" style="margin:.25rem 0 1rem"><div class="cb"><strong>You're signed in.</strong><p style="font-size:.85rem;margin-top:.35rem">This application will use your existing account: ${escapeHTML(user.email)}.</p></div></div>`}
           <div class="fg"><label class="fl">Phone Number</label>
             <input class="fc" name="phone" type="tel" placeholder="+234 800 000 0000"></div>
           <div class="irow">
@@ -1014,7 +1036,7 @@ function pMember() {
           <p style="margin-top:.7rem">Continue to Paystack to complete your membership fee payment. Your payment will be verified automatically.</p>
           <p id="mem-pay-error" class="fe" style="display:none;margin-top:1rem;text-align:left"></p>
           <button class="btn btn-gold w100" style="margin-top:1.25rem" id="mem-pay-btn" type="button" onclick="startMembershipCheckout()">Continue to Paystack →</button>
-          <p style="font-size:.82rem;color:var(--muted);margin-top:1rem">After payment, the chapter will review your details. Approved members receive an email invitation to set a password.</p>
+          <p style="font-size:.82rem;color:var(--muted);margin-top:1rem">After payment, your account will be ready to sign in. The chapter will review your membership details before activating member-only access. If email confirmation is enabled, confirm your address first.</p>
         </div>
       </div></div>
     </div>
@@ -1039,24 +1061,77 @@ async function submitMem(e) {
   const err = document.getElementById('mem-err');
   if (!db) { err.textContent = 'The application service is unavailable. Please try again later.'; err.style.display = 'block'; return; }
   btn.disabled = true;
-  btn.textContent = 'Saving application…';
+  btn.textContent = 'Creating account and saving application…';
   err.style.display = 'none';
   const fd = new FormData(f);
   const payload = {
     full_name: `${fd.get('fn') || ''} ${fd.get('ln') || ''}`.trim(),
-    email: String(fd.get('email') || '').trim(),
+    email: String(fd.get('email') || '').trim().toLowerCase(),
     phone: String(fd.get('phone') || '').trim(),
     matric_number: String(fd.get('matric') || '').trim(),
     department: String(fd.get('dept') || '').trim(),
     level: String(fd.get('level') || '').trim(),
     member_category: String(fd.get('member_category') || 'new').trim()
   };
+  const password = String(fd.get('account_password') || '');
+  const passwordConfirm = String(fd.get('account_password_confirm') || '');
+  let accountCreatedHere = sessionStorage.getItem('nieee-created-account-email') === payload.email;
+  let applicationSaved = false;
   try {
+    if (!payload.email) throw new Error('Enter a valid email address.');
+    const { data: sessionResult, error: sessionError } = await db.auth.getSession();
+    if (sessionError) throw sessionError;
+    const sessionUser = sessionResult?.session?.user;
+
+    if (sessionUser) {
+      if ((sessionUser.email || '').toLowerCase() !== payload.email) {
+        throw new Error(`You are signed in as ${sessionUser.email}. Use that email for this application, or log out before applying with another email.`);
+      }
+      // A user already signed in has already created an account.
+      sessionStorage.setItem('nieee-created-account-email', payload.email);
+    } else if (!accountCreatedHere) {
+      if (password.length < 8) throw new Error('Your password must be at least 8 characters.');
+      if (password !== passwordConfirm) throw new Error('The passwords do not match.');
+      const { data: signupData, error: signupError } = await db.auth.signUp({
+        email: payload.email,
+        password,
+        options: {
+          emailRedirectTo: `${NIEEE_SITE_URL}?auth=signup-confirmed`,
+          data: {
+            full_name: payload.full_name,
+            matric_number: payload.matric_number,
+            department: payload.department,
+            level: payload.level
+          }
+        }
+      });
+      if (signupError) {
+        if (/already registered|already exists|user already/i.test(signupError.message || '')) {
+          throw new Error('An account already exists for this email. Go to Member Login, sign in with that account, then return and submit your application.');
+        }
+        throw signupError;
+      }
+      if (!signupData?.user || (Array.isArray(signupData.user.identities) && signupData.user.identities.length === 0)) {
+        throw new Error('An account may already exist for this email. Please use Member Login, then return to apply.');
+      }
+      accountCreatedHere = true;
+      sessionStorage.setItem('nieee-created-account-email', payload.email);
+      if (signupData.session) {
+        await handleUser(signupData.user);
+      }
+    } else {
+      // This tab already created the account, but Supabase may require email confirmation
+      // and therefore not have issued a session yet. Continue without creating it twice.
+      if (password && password !== passwordConfirm) throw new Error('The passwords do not match.');
+    }
+
     const { data, error } = await db.functions.invoke('membership-submit', { body: payload });
     if (error) throw error;
     if (!data || data.ok !== true || !data.applicationId || !data.paymentToken) {
       throw new Error(data?.message || 'The application was not saved. Please try again.');
     }
+    applicationSaved = true;
+    sessionStorage.setItem('nieee-pending-membership-email', payload.email);
     pendingMemberPayment = {
       applicationId: data.applicationId,
       paymentToken: data.paymentToken,
@@ -1069,15 +1144,19 @@ async function submitMem(e) {
     if (payButton) { payButton.disabled = true; payButton.textContent = 'Opening secure checkout…'; }
     await startMembershipCheckout();
   } catch (ex) {
-    console.error('[NIEEE] Application/payment start failed:', ex);
-    err.textContent = ex?.message || 'Submission failed. Please try again.';
+    console.error('[NIEEE] Account/application/payment start failed:', ex);
+    let message = ex?.message || 'Submission failed. Please try again.';
+    if (accountCreatedHere && !applicationSaved && !/already exists|account already/i.test(message)) {
+      message = `Your account may already have been created, but the application could not be saved. ${message} If this repeats, sign in with the same email and retry the application.`;
+    }
+    err.textContent = message;
     err.style.display = 'block';
+    err.classList.add('show');
     btn.disabled = false;
     updateMembershipFee();
-    toast('We could not start the application. Please check your details and try again.', 'error');
+    toast('We could not complete the application. Read the message below before retrying.', 'error');
   }
 }
-
 async function startMembershipCheckout() {
   const payButton = document.getElementById('mem-pay-btn');
   const err = document.getElementById('mem-pay-error');
@@ -1114,7 +1193,7 @@ function pMemberLogin(message = '') {
       <div style="text-align:center;margin-bottom:1.5rem">
         <img src="${NIEEE_LOGO}" alt="NIEEE" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);background:#fff;padding:3px;margin:0 auto 1rem">
         <h2>Member Login</h2>
-        <p>Sign in after completing the account setup invitation sent by NIEEE ATBU.</p>
+        <p>Use the email and password you created on your membership application. If you have not applied yet, start from the Membership Application page.</p>
       </div>
       <div class="fe ${message?'show':''}" id="ml-err" style="margin-bottom:1rem">${escapeHTML(message)}</div>
       <form onsubmit="doMemberLogin(event)">
@@ -1123,7 +1202,7 @@ function pMemberLogin(message = '') {
         <button class="btn btn-gold w100 btn-lg" type="submit" id="ml-btn">Log In →</button>
       </form>
       <p style="text-align:center;font-size:.88rem;margin-top:1rem"><a onclick="sendMemberPasswordReset()" style="color:var(--gold);cursor:pointer">Forgot your password?</a></p>
-      <p style="text-align:center;font-size:.88rem;margin-top:1rem">New applicant? <a onclick="go('membership')" style="color:var(--gold);cursor:pointer">Apply for membership</a>. No password is required to apply.</p>
+      <p style="text-align:center;font-size:.88rem;margin-top:1rem">New member? <a onclick="go('membership')" style="color:var(--gold);cursor:pointer">Apply for membership</a> and create your account there.</p>
       <p style="text-align:center;font-size:.78rem;margin-top:.8rem;color:var(--muted)">Administrators use the separate <a onclick="go('admin')" style="color:var(--gold);cursor:pointer">Admin Login</a>.</p>
     </div></div>
   </div>`);
@@ -1237,7 +1316,7 @@ async function pMemberPortal() {
     if (!data?.hasAccess) {
       const status = data?.applicationStatus || 'not found';
       const payment = data?.paymentStatus || 'unpaid';
-      el.innerHTML = `<div class="card"><div class="cb"><h2>Membership Access Pending</h2><p style="margin-top:.8rem">Your member area is available after your application is approved and the required payment is verified.</p><p style="margin-top:.8rem"><strong>Application:</strong> ${escapeHTML(status)} &nbsp; <strong>Payment:</strong> ${escapeHTML(payment)}</p><p style="margin-top:.8rem">If you have paid, wait for verification and chapter review. If your application is approved, check your email for the secure account invitation from NIEEE ATBU.</p><button class="btn btn-out" style="margin-top:1rem" onclick="go('membership')">Membership Application</button></div></div>`;
+      el.innerHTML = `<div class="card"><div class="cb"><h2>Membership Access Pending</h2><p style="margin-top:.8rem">Your account is active, but member-only access becomes available after your application is approved and payment is verified.</p><p style="margin-top:.8rem"><strong>Application:</strong> ${escapeHTML(status)} &nbsp; <strong>Payment:</strong> ${escapeHTML(payment)}</p><p style="margin-top:.8rem">You do not need another account invitation. Sign in with the email and password you created during your application. If Supabase asked you to confirm your email, complete that step first.</p><button class="btn btn-out" style="margin-top:1rem" onclick="go('membership')">Membership Application</button></div></div>`;
       return;
     }
     const meta = signedInUser.user_metadata || {};
@@ -1259,8 +1338,21 @@ async function handlePaymentReturn() {
     const { data, error } = await db.functions.invoke('membership-verify-payment', { body: { reference } });
     if (error) throw error;
     if (data?.paid) {
-      html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">✅</div><h1 style="margin-top:1rem">Payment Received</h1><p style="margin-top:1rem">Your Paystack payment has been verified. Your membership application is now awaiting review by the NIEEE ATBU team. If approved, you will receive an email invitation to set your password and sign in.</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p><button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</button></div></div></div>`);
-      toast('Payment verified successfully.', 'success', 5000);
+      const { data: authState } = await db.auth.getSession();
+      const signedInEmail = (authState?.session?.user?.email || '').toLowerCase();
+      const expectedEmail = (sessionStorage.getItem('nieee-pending-membership-email') || sessionStorage.getItem('nieee-created-account-email') || '').toLowerCase();
+      const applicantSignedIn = !!signedInEmail && (!expectedEmail || signedInEmail === expectedEmail);
+      if (applicantSignedIn) await handleUser(authState.session.user);
+      const accountMessage = applicantSignedIn
+        ? 'Your account is created and you are signed in. Your membership application is awaiting review by the NIEEE ATBU team. Your member-only access will activate after approval.'
+        : 'Your payment is verified and your account was created during application. If email confirmation is enabled, open the confirmation email first; then use Member Login with the email and password you chose. Your membership application is awaiting chapter review.';
+      const nextButton = applicantSignedIn
+        ? `<button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('member')">Open My Member Account →</button>`
+        : `<button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('member-login')">Go to Member Login →</button>`;
+      html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">✅</div><h1 style="margin-top:1rem">Payment Verified</h1><p style="margin-top:1rem">${escapeHTML(accountMessage)}</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p>${nextButton}</div></div></div>`);
+      sessionStorage.removeItem('nieee-pending-membership-email');
+      sessionStorage.removeItem('nieee-created-account-email');
+      toast(applicantSignedIn ? 'Payment verified. You are signed in.' : 'Payment verified. Confirm your email or sign in to continue.', 'success', 6500);
     } else {
       html(`<div class="container" style="max-width:760px;padding:4rem 1.25rem"><div class="card"><div class="cb" style="text-align:center;padding:2.5rem"><div style="font-size:3rem">⏳</div><h1 style="margin-top:1rem">Payment Not Confirmed Yet</h1><p style="margin-top:1rem">${escapeHTML(data?.message || 'We could not confirm your payment yet.')}</p><p style="margin-top:.8rem">Do not pay again immediately if your account was charged. Contact NIEEE ATBU and provide this reference so the team can check it.</p><p style="margin-top:1rem;font-size:.88rem;color:var(--muted)">Payment reference: <strong>${escapeHTML(reference)}</strong></p><button class="btn btn-gold" style="margin-top:1.5rem" onclick="go('home')">Back to Home</button></div></div></div>`);
       toast('Payment is not confirmed yet. Do not pay again immediately.', 'error', 6500);
@@ -1729,7 +1821,7 @@ async function aMemberHTML() {
   const sc={pending:'bg-gold',approved:'bg-green',rejected:'bg-red'};
   const fees={new:3000,returning:1500};
   return `<div>
-    <h2 style="margin-bottom:.5rem">Membership Applications</h2><p style="margin-bottom:1.5rem">Students pay online when they apply. Review paid applications here, then approve eligible members and send the account invitation. If a paid application is rejected, the refund must be handled manually in Paystack.</p>
+    <h2 style="margin-bottom:.5rem">Membership Applications</h2><p style="margin-bottom:1.5rem">Students create their account when applying and pay online. Review paid applications here, then approve eligible members. Approved students can sign in using the account they created. If a paid application is rejected, the refund must be handled manually in Paystack.</p>
     <div class="tw"><table>
       <thead><tr><th>Name</th><th>Email</th><th>Matric</th><th>Dept.</th><th>Level</th><th>Member Type</th><th>Fee</th><th>Application</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead>
       <tbody>${!(data&&data.length)?`<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--muted)">No applications yet.</td></tr>`:
@@ -1740,7 +1832,7 @@ async function aMemberHTML() {
         const actionButtons = payment==='paid' && a.status==='pending'
           ? `<button class="btn btn-success btn-sm" onclick="appStatus('${String(a.id).replace(/'/g,'')}','approved',this)">Approve</button><button class="btn btn-danger btn-sm" onclick="appStatus('${String(a.id).replace(/'/g,'')}','rejected',this)">Reject / Refund</button>`
           : payment==='paid' && a.status==='approved'
-            ? `<button class="btn btn-gold btn-sm" onclick="sendMemberInvite('${String(a.id).replace(/'/g,'')}',this)">Send Account Invite</button>`
+            ? `<span class="badge bg-green">Approved — member can log in</span>`
             : a.status==='rejected' && payment==='paid'
               ? `<span class="badge bg-red">Refund required</span>`
               : `<span style="font-size:.78rem;color:var(--muted)">Awaiting payment</span>`;
